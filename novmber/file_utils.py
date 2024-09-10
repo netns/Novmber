@@ -26,6 +26,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import logging
 from pathlib import Path
 
 
@@ -56,15 +57,17 @@ class FileUtils:
         """
         try:
             for item in path.iterdir():
-                if item.is_file():
-                    if item.suffix in self.extensions:
-                        self.files.append(item)
+                if item.is_file() and item.suffix in self.extensions:
+                    self.files.append(item)
                 else:
                     self.get_all_files(item)
+
         except NotADirectoryError as e:
-            print(f"Skipping: current item is not a directory. {e}")
+            logging.warning(f"Skipping: current item is not a directory. {e}")
         except FileNotFoundError as e:
-            print(f"Skipping: current item is inaccessible. {e}")
+            logging.warning(f"Skipping: current item is inaccessible. {e}")
+        except PermissionError as e:
+            logging.warning(f"Skipping: permission deined to access current item. {e}")
 
 
 if __name__ == "__main__":
