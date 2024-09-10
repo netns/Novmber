@@ -29,6 +29,7 @@
 import logging
 from pathlib import Path
 
+logger = logging.getLogger(__name__)
 
 class FileUtils:
 
@@ -69,11 +70,11 @@ class FileUtils:
                     self.get_all_files(item)
 
         except NotADirectoryError as e:
-            logging.warning(f"Skipping: current item is not a directory. {e}")
+            logger.info(f"Skipping: current item is not a directory. {e}")
         except FileNotFoundError as e:
-            logging.warning(f"Skipping: current item is inaccessible. {e}")
+            logger.info(f"Skipping: current item is inaccessible. {e}")
         except PermissionError as e:
-            logging.warning(f"Skipping: permission deined to access current item. {e}")
+            logger.warning(f"Skipping: permission deined to access current item. {e}")
 
 
 if __name__ == "__main__":
