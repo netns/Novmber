@@ -26,7 +26,28 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+from pathlib import Path
+
+
 class Encrypter:
 
     def __init__(self) -> None:
         pass
+
+    def gen_keys(self) -> None:
+        pass
+
+    def encrypt(self, file_bytes: bytes) -> bytes:
+        pass
+
+    def decrypt(self) -> bytes:
+        pass
+
+    def get_file_bytes(self, file: Path) -> bytes:
+        pass
+
+    # def __enter__(self) -> None:
+    #    pass
+    #
+    # def __exit__(self, exception_type, exception_value, exception_traceback) -> None:
+    #    pass
