@@ -16,10 +16,6 @@ class FileUtils:
         ".doc", ".docx", ".odt",
     ]
     # fmt: on
-    root_dir: Path
-
-    def __init__(self, path: Path) -> None:
-        self.root_dir = path
 
     def get_all_files(self, path: Path) -> None:
         try:
@@ -36,8 +32,8 @@ class FileUtils:
 
 
 if __name__ == "__main__":
-    fileutils = FileUtils(Path.cwd())
-    fileutils.get_all_files(fileutils.root_dir)
+    fileutils = FileUtils()
+    fileutils.get_all_files(Path.cwd())
 
     with open("files.txt", "w") as f:
         f.write(str(fileutils.files))
