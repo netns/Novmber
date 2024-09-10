@@ -31,7 +31,6 @@ from pathlib import Path
 
 class FileUtils:
 
-    files: list[Path] = []
     # fmt: off
     extensions: list[str] = [
         ".tex", ".txt", ".md",
@@ -45,7 +44,16 @@ class FileUtils:
     ]
     # fmt: on
 
+    def __init__(self) -> None:
+        self.files: list[Path] = []
+
     def get_all_files(self, path: Path) -> None:
+        """
+        Get the path of all files in a directory tree.
+
+        Args:
+            path (Path): Target dir path.
+        """
         try:
             for item in path.iterdir():
                 if item.is_file():
