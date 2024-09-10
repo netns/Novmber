@@ -50,10 +50,16 @@ class FileUtils:
 
     def get_all_files(self, path: Path) -> None:
         """
-        Get the path of all files in a directory tree.
-
+        Recursively collects file paths from the given directory and subdirectories
+        that match allowed file extensions.
+        
         Args:
-            path (Path): Target dir path.
+            path (Path): The root directory path to start the file search.
+
+        Raises:
+            NotADirectoryError: If a path is expected to be a directory but is not.
+            FileNotFoundError: If a file or directory cannot be accessed.
+            PermissionError: If the program lacks the necessary permissions to access a file or directory.
         """
         try:
             for item in path.iterdir():
