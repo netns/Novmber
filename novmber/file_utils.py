@@ -31,7 +31,12 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+
 class FileUtils:
+    """
+    A utility class to search files
+    based on their extension.
+    """
 
     # fmt: off
     extensions: list[str] = [
@@ -53,15 +58,17 @@ class FileUtils:
         """
         Recursively collects file paths from the given directory and subdirectories
         that match allowed file extensions.
-        
+
         Args:
             path (Path): The root directory path to start the file search.
 
         Raises:
             NotADirectoryError: If a path is expected to be a directory but is not.
             FileNotFoundError: If a file or directory cannot be accessed.
-            PermissionError: If the program lacks the necessary permissions to access a file or directory.
+            PermissionError: If the program lacks the necessary permissions
+            to access a file or directory.
         """
+
         try:
             for item in path.iterdir():
                 if item.is_file() and item.suffix in self.extensions:
@@ -70,12 +77,19 @@ class FileUtils:
                     self.get_all_files(item)
 
         except NotADirectoryError as e:
-            logger.info(f"Skipping: current item is not a directory. {e}")
+            logger.info("Skipping: current item is not a directory. %s", e)
         except FileNotFoundError as e:
-            logger.info(f"Skipping: current item is inaccessible. {e}")
+            logger.info("Skipping: current item is inaccessible. %s", e)
         except PermissionError as e:
-            logger.warning(f"Skipping: permission deined to access current item. {e}")
+            logger.warning("Skipping: permission deined to access current item. %s", e)
 
+    def get_n_of_files(self) -> int:
+        """_summary_
+
+        Returns:
+            int: _description_
+        """
+        return len(self.files)
 
 if __name__ == "__main__":
     fileutils = FileUtils()

