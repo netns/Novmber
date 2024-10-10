@@ -27,10 +27,12 @@
 # SOFTWARE.
 
 from pathlib import Path
-from cryptography.fernet import Fernet
 import logging
 
+from cryptography.fernet import Fernet
+
 logger = logging.getLogger(__name__)
+
 
 class Encrypter:
     """
