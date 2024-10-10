@@ -29,8 +29,8 @@
 import logging
 from pathlib import Path
 
-from novmber.file_utils import FileUtils
 from novmber.encrypter import Encrypter
+from novmber.file_utils import FileUtils
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
