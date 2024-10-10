@@ -28,7 +28,7 @@
 
 import logging
 
-from .file_utils import FileUtils
+from novmber.file_utils import FileUtils
 
 logging.basicConfig(level=logging.INFO)
 
