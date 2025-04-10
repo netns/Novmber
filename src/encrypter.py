@@ -27,7 +27,7 @@
 # SOFTWARE.
 
 from pathlib import Path
-
+from concurrent.futures import ThreadPoolExecutor
 from cryptography.fernet import Fernet
 
 
@@ -47,9 +47,9 @@ def decrypt_bytes(fernet: Fernet, data: bytes) -> bytes:
     return fernet.decrypt(data)
 
 
-def write_encrypted(file: Path, data: bytes) -> None:
+def write_encrypted(file: Path, data: bytes, suffix: str = ".locked") -> None:
     file.write_bytes(data)
-    file.rename(file.with_name(file.name + ".locked"))
+    file.rename(file.with_name(file.name + suffix))
 
 
 def encrypt_file(fernet: Fernet, file: Path) -> None:
@@ -62,5 +62,5 @@ def encrypt_file(fernet: Fernet, file: Path) -> None:
 
 
 def encrypt_files(fernet: Fernet, files: list[Path]) -> None:
-    for file in files:
-        encrypt_file(fernet, file)
+    with ThreadPoolExecutor() as executor:
+        executor.map(lambda file: encrypt_file(fernet, file), files)  # type: ignore
