@@ -1,20 +1,10 @@
-[tool.poetry]
+[project]
 name = "novmber"
-version = "0.2.0"
-description = ""
-authors = ["Daniel Lima"]
-license = "MIT"
+version = "1.0.0"
+description = "Academic ransomware developed for research purposes in the field of Information Security"
+authors = [{ name = "Daniel Lima" }]
+license = { text = "MIT" }
 readme = "README.md"
 
-[tool.poetry.dependencies]
-python = "^3.12"
-cryptography = "^43.0.1"
-
-[tool.poetry.group.dev.dependencies]
-isort = "^5.13.2"
-black = "^24.8.0"
-pylint = "^3.2.7"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+[tool.pyright]
+typeCheckingMode = "strict"
