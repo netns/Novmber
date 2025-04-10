@@ -1,0 +1,7 @@
+cryptography
+pyinstaller
+
+pylint
+black
+isort
+pytest
