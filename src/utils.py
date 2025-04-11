@@ -38,7 +38,7 @@ import requests
 def send_key(url: str, key: bytes, machine_id: str) -> None:
     payload = {"key": key.decode(), "machine_id": machine_id}
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, verify=False)
         if response.status_code != 200:
             print(
                 f"Failed to send key.\nStatus: {response.status_code} | {response.text}"
