@@ -1,6 +1,7 @@
 cryptography
 requests
 pyinstaller
+flask
 
 pylint
 black
