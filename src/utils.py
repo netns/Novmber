@@ -25,6 +25,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+
 import os
 import platform
 import uuid
@@ -35,9 +36,17 @@ import requests
 
 
 def send_key(url: str, key: bytes, machine_id: str) -> None:
-    response = requests.post(url, json={"key": key, "machine_id": machine_id})
-    if response.status_code != 200:
-        print(f"Failed to send key.\nStatus: {response.status_code} | {response.text}")
+    payload = {"key": key.decode(), "machine_id": machine_id}
+    try:
+        response = requests.post(url, json=payload)
+        if response.status_code != 200:
+            print(
+                f"Failed to send key.\nStatus: {response.status_code} | {response.text}"
+            )
+        else:
+            print("Key sent succesfully.")
+    except requests.RequestException as e:
+        print(f"Error while sending key: {e}")
 
 
 def gen_machine_id(ns: UUID = uuid.NAMESPACE_DNS) -> str:
