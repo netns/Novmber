@@ -29,7 +29,7 @@
 from pathlib import Path
 
 # fmt: off
-TARGET_FILES: list[str] = [
+TARGET_FILES: set[str] = {
     # Text & Documents
     ".txt", ".md", ".tex", ".pdf",
     ".doc", ".docx", ".odt", ".rtf",
@@ -48,7 +48,7 @@ TARGET_FILES: list[str] = [
     ".m4v", ".flv", ".webm",
 
     # Project / Editable files
-    ".aep", ".prproj", ".psd", ".blend", ".sketch", 
+    ".aep", ".prproj", ".blend", ".sketch", 
     ".xd", ".fig", ".aup3", ".als",
 
     # Archives & Compressed
@@ -64,9 +64,9 @@ TARGET_FILES: list[str] = [
 
     # Misc
     ".apk", ".exe", ".iso", ".dmg", ".db",
-]
+}
 
-IGNORE_DIRS: list[str] = [
+IGNORE_DIRS: set[str] = {
     ".git",          # Git metadata
     ".hg",           # Mercurial
     ".svn",          # Subversion
@@ -84,28 +84,24 @@ IGNORE_DIRS: list[str] = [
     ".next",         # Next.js build dir
     ".parcel-cache", # Parcel bundler
     "site-packages", # installed Python packages
-]
+}
 # fmt: on
 
 
 def get_all_files(
     path: Path,
-    extensions: list[str] | set[str] | None = None,
-    ignore_dirs: list[str] | set[str] | None = None,
+    extensions: set[str] = TARGET_FILES,
+    ignore_dirs: set[str] = IGNORE_DIRS,
 ) -> list[Path]:
     files: list[Path] = []
-
-    # Set access: O(1), List access: O(n)
-    targets = set(ext.lower() for ext in (extensions or TARGET_FILES))
-    skip_dirs = set(ignore_dirs or IGNORE_DIRS)
 
     try:
         for item in path.iterdir():
             if item.is_dir():
-                if item.name in skip_dirs:
+                if item.name in ignore_dirs:
                     continue
-                files.extend(get_all_files(item, targets, skip_dirs))
-            elif item.is_file() and item.suffix.lower() in targets:
+                files.extend(get_all_files(item, extensions, ignore_dirs))
+            elif item.is_file() and item.suffix.lower() in extensions:
                 files.append(item)
 
     except PermissionError:
