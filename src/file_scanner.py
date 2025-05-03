@@ -25,6 +25,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+"""Module for recursively scanning files."""
 
 from pathlib import Path
 
@@ -93,6 +94,21 @@ def get_all_files(
     extensions: set[str] = TARGET_FILES,
     ignore_dirs: set[str] = IGNORE_DIRS,
 ) -> list[Path]:
+    """
+    Recursively collects all files within a directory (and its subdirectories)
+    that match a given set of file extensions, while skipping ignored directories.
+
+    Args:
+        path (Path): The root directory from which to begin the search.
+        extensions (set[str], optional): A set of file extensions (including the dot,
+            e.g., ".txt", ".pdf") to include in the results. Defaults to TARGET_FILES.
+        ignore_dirs (set[str], optional): A set of directory names to skip during traversal.
+            The match is case-insensitive and applies to any folder in the path.
+            Defaults to IGNORE_DIRS.
+
+    Returns:
+        list[Path]: A list of Path objects corresponding to files that match the criteria.
+    """
     files: list[Path] = []
 
     try:
