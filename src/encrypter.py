@@ -10,11 +10,11 @@
 # See the LICENSE file in the project root for full license text.
 """Provides functionality to encrypt and decrypt files using Fernet symmetric encryption."""
 
+import os
+import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from io import DEFAULT_BUFFER_SIZE
-import os
 from pathlib import Path
-import sys
 
 from cryptography.fernet import Fernet
 
