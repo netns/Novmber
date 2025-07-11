@@ -2,8 +2,3 @@ cryptography
 requests
 pyinstaller
 flask
-
-pylint
-black
-isort
-pytest
