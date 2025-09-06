@@ -9,9 +9,18 @@
 # Licensed under the MIT License.
 # See the LICENSE file in the project root for full license text.CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+
 """Module for recursively scanning files."""
 
+import os
+from collections import deque
 from pathlib import Path
+from typing import Iterator
+
+"""
+Sets are used instead of lists/tuples for O(1) membership checks,
+automatic uniqueness, and clearer semantics when filtering files/dirs.
+"""
 
 # fmt: off
 TARGET_FILES: set[str] = {
@@ -74,39 +83,50 @@ IGNORE_DIRS: set[str] = {
 
 
 def get_all_files(
-    path: Path,
-    extensions: set[str] = TARGET_FILES,
-    ignore_dirs: set[str] = IGNORE_DIRS,
-) -> list[Path]:
+    root_path: Path,
+    extensions: set[str] | None = None,
+    ignore_dirs: set[str] | None = None,
+) -> Iterator[Path]:
     """
-    Recursively collects all files within a directory (and its subdirectories)
-    that match a given set of file extensions, while skipping ignored directories.
+    Lazily traverses a directory tree and yields files that match the given extensions,
+    skipping any directories specified in the ignore list.
+
+    This function performs a breadth-first search (BFS) using a deque, without following
+    symbolic links. It yields results one by one, making it suitable for processing large
+    directory trees without loading everything into memory.
 
     Args:
-        path (Path): The root directory from which to begin the search.
-        extensions (set[str], optional): A set of file extensions (including the dot,
-            e.g., ".txt", ".pdf") to include in the results. Defaults to TARGET_FILES.
-        ignore_dirs (set[str], optional): A set of directory names to skip during traversal.
-            The match is case-insensitive and applies to any folder in the path.
-            Defaults to IGNORE_DIRS.
+        root_path (Path): The root directory from which to begin the search.
+        extensions (set[str], optional): A set of file extensions to include in the
+            results (including the dot, e.g., ".txt", ".pdf"). Defaults to TARGET_FILES.
+        ignore_dirs (set[str], optional): A set of directory names to skip during
+            traversal. The comparison is case-sensitive. Defaults to IGNORE_DIRS.
 
-    Returns:
-        list[Path]: A list of Path objects corresponding to files that match the criteria.
+    Yields:
+        Path: The full path to each file that matches the given criteria.
     """
-    files: list[Path] = []
+    extensions = extensions or TARGET_FILES
+    ignore_dirs = ignore_dirs or IGNORE_DIRS
 
-    try:
-        for item in path.iterdir():
-            if item.is_dir():
-                if item.name.lower() in ignore_dirs:
-                    continue
-                files.extend(get_all_files(item, extensions, ignore_dirs))
-            elif item.is_file() and item.suffix.lower() in extensions:
-                files.append(item)
+    stack = deque([root_path])
 
-    except PermissionError:
-        print(f"Skipping {path}: permission denied.")
-    except (NotADirectoryError, FileNotFoundError):
-        print(f"Skipping {path}: invalid file.")
+    while stack:
+        current_path = stack.popleft()
+        try:
+            with os.scandir(current_path) as it:
+                for entry in it:
+                    if (
+                        entry.is_dir(follow_symlinks=False)
+                        and entry.name not in ignore_dirs
+                    ):
+                        stack.append(Path(entry.path))
+                    elif (
+                        entry.is_file(follow_symlinks=False)
+                        and Path(entry.name).suffix.lower() in extensions
+                    ):
+                        yield Path(entry.path)
 
-    return files
+        except PermissionError:
+            print(f"Skipping {current_path}: permission denied.")
+        except (NotADirectoryError, FileNotFoundError):
+            print(f"Skipping {current_path}: invalid file.")
