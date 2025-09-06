@@ -12,7 +12,7 @@
 """Provides functionality to encrypt files using Fernet symmetric encryption."""
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from io import DEFAULT_BUFFER_SIZE, BufferedReader, BufferedWriter
+from io import BufferedReader, BufferedWriter
 from pathlib import Path
 from typing import Iterable, Literal
 
@@ -35,23 +35,20 @@ class Encrypter:
     @staticmethod
     def validate_buffer(buff_size: int) -> int:
         """
-        Ensures that the buffer size is between 4KB and 64KB.
+        Ensures that the buffer size is between 8KB and 256KB.
 
         Args:
             buff_size (int): Desired buffer size in bytes.
 
         Returns:
-            int: A buffer size constrained to the range [4096, 65536].
+            int: A buffer size constrained to the range [8192, 262144].
         """
-        MAX_BUFF = 65536
-        MIN_BUFF = 4096
+        MAX_BUFF = 262144
+        MIN_BUFF = 8192
         return max(MIN_BUFF, min(MAX_BUFF, buff_size))
 
     def _encrypt_stream(
-        self,
-        input_stream: BufferedReader,
-        output_stream: BufferedWriter,
-        buff: int = 4096,  # 4kb buff size
+        self, input_stream: BufferedReader, output_stream: BufferedWriter, buff: int
     ):
         """
         Encrypts data from an input stream and writes it to an output stream in chunks.
@@ -61,8 +58,7 @@ class Encrypter:
         Args:
             input_stream (BufferedReader): Stream to read plaintext data from.
             output_stream (BufferedWriter): Stream to write encrypted data to.
-            buff (int, optional): Chunk size in bytes. Will be validated between
-                4KB and 64KB. Defaults to 4096.
+            buff (int): Chunk size in bytes. Will be validated between 8KB and 256KB.
         """
         buff = Encrypter.validate_buffer(buff)
         while chunk := input_stream.read(buff):
@@ -70,7 +66,7 @@ class Encrypter:
             output_stream.write(len(enc).to_bytes(4, self.byteorder))  # type: ignore
             output_stream.write(enc)
 
-    def encrypt_file(self, file: Path, suffix: str = ".locked"):
+    def encrypt_file(self, file: Path, suffix: str = ".locked", buff: int = 8192):
         """
         Encrypts a single file and optionally renames it with a suffix.
 
@@ -80,11 +76,14 @@ class Encrypter:
             file (Path): Path to the file to encrypt.
             suffix (str, optional): Suffix to append to the encrypted file's name.
                 Defaults to ".locked".
+            buff (int, optional): Buffer size for chunked processing. Validated to
+                the range [8KB, 256KB]. Defaults to 8KB.
         """
+        buff = Encrypter.validate_buffer(buff)
         dest = file.with_name(file.name + suffix)
         try:
             with file.open("rb") as f_in, dest.open("wb") as f_out:
-                self._encrypt_stream(f_in, f_out, buff=DEFAULT_BUFFER_SIZE)
+                self._encrypt_stream(f_in, f_out, buff)
             file.unlink()
         except (PermissionError, FileNotFoundError, IsADirectoryError) as e:
             print(f"Skipping: {file}: {e}")
